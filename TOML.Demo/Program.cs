@@ -51,12 +51,14 @@ hosts = [
 ";
 
 			dynamic td;
-			if(TomlParser.TryParse(t, out td));
+			if (!TomlParser.TryParse(t, out td))
 			{
-				var q = td.clients.data;
-				var h1 = td.GetTreeHash();
-				var h2 = td.GetFlatHash();
+				return;
 			}
+			var q = td.clients.data;
+			var s = td.GetDynamicMemberNames();
+			var h1 = td.GetTreeHash();
+			var h2 = td.GetFlatHash();
 		}
 	}
 

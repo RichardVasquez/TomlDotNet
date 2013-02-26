@@ -33,6 +33,22 @@ namespace TOML
 			return sb.ToString();
 		}
 
+		public int Depth
+		{
+			get
+			{
+				int i = 1;
+				foreach (int d in 
+					Value.OfType<TokenArray>()
+					.Select(token => token.Depth + i)
+					.Where(d => d > i))
+				{
+					return d;
+				}
+				return i;
+			}
+		}
+
 		public override string ToString()
 		{
 			if (Value == null)

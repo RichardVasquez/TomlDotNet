@@ -423,5 +423,27 @@ namespace TOML
 			}
 			return tempNulls.ToList();
 		}
+
+		public override IEnumerable<string> GetDynamicMemberNames()
+		{
+			List<string> members = new List<string>();
+
+			foreach (var va in _variables)
+			{
+				string s = va.Name;
+				if (va.Data is TokenArray)
+				{
+					int d = ( va.Data as TokenArray ).Depth;
+					for (int i = 0; i < d; i++)
+					{
+						s += "[]";
+					}
+				}
+				members.Add(s);
+			}
+			return members;
+		}
+
+
 	}
 }
