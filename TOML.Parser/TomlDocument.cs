@@ -123,7 +123,17 @@ namespace TOML
 					result = null;
 					return false;
 				case 1:
-					result = UnboxTomlObject(lth[ 0 ].Data);
+					if (lth[ 0 ].NameParts.Count == 1)
+					{
+						result = UnboxTomlObject(lth[ 0 ].Data);
+						return true;
+					}
+					TomlHash snip = new TomlHash
+					{
+						Data = lth[ 0 ].Data,
+						NameParts = lth[ 0 ].NameParts.Skip(1).ToList()
+					};
+					result = new TomlDocument(new List<TomlHash>{snip});
 					return true;
 				default:
 					List<TomlHash> fin =
@@ -426,8 +436,43 @@ namespace TOML
 
 		public override IEnumerable<string> GetDynamicMemberNames()
 		{
-			List<string> members = new List<string>();
+			List<string> members;
+			members = _variables.Count > 0
+				          ? GetVariableMembers()
+				          : GetArrayMembers();
 
+			return members;
+		}
+
+		private List<string> GetArrayMembers()
+		{
+			List<string> members = new List<string>();
+			foreach (var token in _arrays)
+			{
+				var v = token as TokenArray;
+				if (v == null)
+				{
+					continue;
+				}
+				string fin ="";
+				foreach (var item in v.Value)
+				{
+					string output;
+					var cel = item as TokenArray;
+					string t = ( UnboxTomlObject(item).ToString() );
+					output = cel != null
+						         ? string.Format("[{0}]", cel.Depth)
+						         : string.Format("[{0}]", t);
+					fin += output;
+				}
+				members.Add(fin);
+			}
+			return members;
+		}
+
+		private List<string> GetVariableMembers()
+		{
+			List<string> members = new List<string>();
 			foreach (var va in _variables)
 			{
 				string s = va.Name;
@@ -443,7 +488,5 @@ namespace TOML
 			}
 			return members;
 		}
-
-
 	}
 }
