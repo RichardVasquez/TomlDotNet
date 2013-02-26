@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.IO;
@@ -27,30 +28,18 @@ namespace TOML
 			Munge();
 		}
 
+		/// <summary>
+		/// Get all the key/group names
+		/// </summary>
 		private void Munge()
 		{
 			MungeRootBlock();
 			MungeNamedBlocks();
-			//BuildEmptyHashes();
 		}
 
-		private void BuildEmptyHashes()
-		{
-			HashSet<string> tempNulls = new HashSet<string>();
-			foreach (string name in _variables.SelectMany(hash => hash.SubNames()))
-			{
-				tempNulls.Add(name);
-			}
-			foreach (TomlHash hash in _variables)
-			{
-				tempNulls.Remove(hash.Name);
-			}
-			foreach (var p in tempNulls.Select(tempNull => tempNull.Split(new[] {'.'}).ToList()))
-			{
-				_variables.Add(new TomlHash{Data = new TokenNull(), NameParts = p});
-			}
-		}
-
+		/// <summary>
+		/// Get the sub keygroups
+		/// </summary>
 		private void MungeNamedBlocks()
 		{
 			foreach (var block in _namedBlocks)
@@ -74,6 +63,9 @@ namespace TOML
 			}
 		}
 
+		/// <summary>
+		/// Get the keys that don't belong to any named group.
+		/// </summary>
 		private void MungeRootBlock()
 		{
 			foreach (var tomlKeyValue in _rootBlock.Assignments)
@@ -115,6 +107,13 @@ namespace TOML
 			}
 		}
 
+		/// <summary>
+		/// The type of data you're trying to retrieve (either a keygroup or an actual key)
+		/// will determine if you receive a "child" TomlDocument or an actual value.
+		/// </summary>
+		/// <param name="binder"></param>
+		/// <param name="result"></param>
+		/// <returns></returns>
 		public override bool TryGetMember(GetMemberBinder binder, out object result)
 		{
 			List<TomlHash> lth = _variables.Where(hash => hash.NameParts.First() == binder.Name).ToList();
@@ -127,11 +126,17 @@ namespace TOML
 					result = UnboxTomlObject(lth[ 0 ].Data);
 					return true;
 				default:
-					foreach (var hash in lth)
+					List<TomlHash> fin =
+						lth.Select(
+						           hash =>
+						           new TomlHash {Data = hash.Data, NameParts = new List<string>(hash.NameParts)})
+						   .ToList();
+
+					foreach (var hash in fin)
 					{
 						hash.NameParts.RemoveAt(0);
 					}
-					result = new TomlDocument(lth);
+					result = new TomlDocument(fin);
 					return true;
 			}
 		}
@@ -141,10 +146,10 @@ namespace TOML
 		/// </summary>
 		public override bool TryGetIndex(GetIndexBinder binder, object[] indexes, out object result)
 		{
-			object o = new object();
+			object[] o = {new object()};
 			if (indexes.Count() == 1)
 			{
-				ProcessSingleIndex(indexes[ 0 ], out o);
+				ProcessSingleIndex(indexes[ 0 ], out o[ 0 ]);
 			}
 			else
 			{
@@ -154,15 +159,15 @@ namespace TOML
 				//
 				//	Note, at which point, if something like the above were allowed, would lend to screams heard
 				//	round the world.
-				o = _arrays.Count != 0
+				o[ 0 ] = _arrays.Count != 0
 					    ? new TomlDocument(_arrays)
 					    : new TomlDocument(_variables);
-				foreach (var index in indexes.Where(index => o != null && index !=null))
+				foreach (var index in indexes.Where(index => o[ 0 ] != null && index !=null))
 				{
-					o = (o as dynamic)[ index ];
+					o[ 0 ] = (o[ 0 ] as dynamic)[ index ];
 				}
 			}
-			result = o;
+			result = o[ 0 ];
 			return true;
 		}
 
@@ -177,16 +182,21 @@ namespace TOML
 				List<TomlHash> vars = _variables.Where(v => v.MatchesName(idx)).ToList();
 				if (vars.Count > 0)
 				{
-					foreach (var hash in vars)
+					List<TomlHash> fin =
+						vars.Select(
+						            hash =>
+						            new TomlHash {Data = hash.Data, NameParts = new List<string>(hash.NameParts)})
+						    .ToList();
+					foreach (var hash in fin)
 					{
 						hash.TrimName(idx);
 					}
 
-					var cleared = vars.Where(v => v.Name == "").ToList();
+					var cleared = fin.Where(v => v.Name == "").ToList();
 					switch (cleared.Count)
 					{
 						case 0:
-							result = new TomlDocument(vars);
+							result = new TomlDocument(fin);
 							break;
 						case 1:
 							result = UnboxTomlObject(cleared[ 0 ].Data);
@@ -215,10 +225,8 @@ namespace TOML
 		}
 
 		/// <summary>
-		/// Unboxes to a primitive or an TomlDocument.
+		/// Unboxes to a primitive or a TomlDocument.
 		/// </summary>
-		/// <param name="data"></param>
-		/// <returns></returns>
 		private static object UnboxTomlObject(ITomlToken data)
 		{
 			if (data is TokenString)
@@ -254,6 +262,166 @@ namespace TOML
 			throw new ArgumentException("Unusable data type: " + data.GetType());
 		}
 
+		/// <summary>
+		/// Returns a Hashset where all keygroups are broken down by key names with
+		/// numeric indices for arrays.  Using the original TOML document provided,
+		/// You would acess the value "alpha" via ["clients"]["hosts"][0].
+		/// </summary>
+		/// <param name="root"></param>
+		/// <returns></returns>
+		public Hashtable GetTreeHash(string root = "")
+		{
+			Hashtable ht = new Hashtable();
+			var names = GetAllHashNames(root);
+			if (names.Count > 0)
+			{
+				foreach (var name in names)
+				{
+					var v = _variables.FirstOrDefault(vn => vn.Name == name);
+					string keyName = name.Substring(root.Length);
+					if (keyName.StartsWith("."))
+					{
+						keyName = keyName.Substring(1);
+					}
+					if (v != null)
+					{
+						//	really here
+						if (!(v.Data is TokenArray))
+						{
+							ht[ keyName ] = UnboxTomlObject(v.Data);
+						}
+						else
+						{
+							ht[ keyName ] = MakeNestedHash(v.Data);
+						}
+					}
+					else
+					{
+						//	Go down the tree
+						ht[keyName] = GetTreeHash(name);
+					}
+				}
+			}
+			return ht;
+		}
 
+		/// <summary>
+		/// Finds the hash names that are immediate children of filter.
+		/// </summary>
+		private List<string> GetAllHashNames(string filter)
+		{
+			var parts = filter.Split(new[] {'.'},StringSplitOptions.RemoveEmptyEntries).ToList();
+			HashSet<string> temp = new HashSet<string>();
+			foreach (TomlHash v in _variables)
+			{
+				if (parts.Count == 0)
+				{
+					temp.Add(v.NameParts.First());
+				}
+				else
+				{
+					var sn = v.SubNames(parts);
+					if (sn != null)
+					{
+						temp.Add(string.Join(".", sn));
+					}
+				}
+			}
+			List<string> res = temp.ToList();
+			res.Sort();
+			return res;
+		}
+
+		/// <summary>
+		/// Returns a flattened Hashset where all the text keys are defined as
+		/// full hash names.  Arrays have numerical indices.  Using the original
+		/// TOML document provided, you would acess the value "alpha" via
+		/// ["clients.hosts"][0].
+		/// </summary>
+		public Hashtable GetFlatHash()
+		{
+			Hashtable ht = new Hashtable();
+			IEnumerable<string> empty = BuildEmptyHashes();
+
+			foreach (string s in empty)
+			{
+				ht[ s ] = new Hashtable();
+			}
+
+			if (_arrays.Count > 0)
+			{
+				int idx = 0;
+				foreach (ITomlToken tomlToken in _arrays)
+				{
+					if (!( tomlToken is TokenArray ))
+					{
+						ht[ idx++ ] = UnboxTomlObject(tomlToken);
+					}
+					else
+					{
+						ht[ idx++ ] = MakeNestedHash(tomlToken);
+					}
+				}
+			}
+			else
+			{
+				foreach (TomlHash hash in _variables)
+				{
+					if (!( hash.Data is TokenArray ))
+					{
+						ht[ hash.Name ] = UnboxTomlObject(hash.Data);
+					}
+					else
+					{
+						ht[ hash.Name ] = MakeNestedHash(hash.Data);
+					}
+				}
+			}
+
+			return ht;
+
+		}
+
+		/// <summary>
+		/// Unboxes a data element within an array or recurses to further process an array.
+		/// </summary>
+		private static object MakeNestedHash(ITomlToken tomlToken)
+		{
+			Hashtable nht = new Hashtable();
+			var a = tomlToken as TokenArray;
+			if (a == null)
+			{
+				return nht;
+			}
+			for (int i = 0; i < a.Value.Count; i++)
+			{
+				if (a.Value[ i ] is TokenArray)
+				{
+					nht[ i ] = MakeNestedHash(a.Value[ i ]);
+				}
+				else
+				{
+					nht[ i ] = UnboxTomlObject(a.Value[ i ]);
+				}
+			}
+			return nht;
+		}
+
+		/// <summary>
+		/// Finds empty hash keys to ensure they are retrievable even if not defined
+		/// </summary>
+		private IEnumerable<string> BuildEmptyHashes()
+		{
+			HashSet<string> tempNulls = new HashSet<string>();
+			foreach (string name in _variables.SelectMany(hash => hash.SubNames()))
+			{
+				tempNulls.Add(name);
+			}
+			foreach (TomlHash hash in _variables)
+			{
+				tempNulls.Remove(hash.Name);
+			}
+			return tempNulls.ToList();
+		}
 	}
 }

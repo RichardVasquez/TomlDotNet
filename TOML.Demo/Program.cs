@@ -11,45 +11,6 @@ namespace TOML.Demo
 	{
 		static void Main(string[] args)
 		{
-			#region bleh
-			string s = @"
-#comment
-[
-#comment
-	[""34"" , ""-45""],
-#comment
-	[true, false, false, true, true],
-#comment
-	[
-#comment
-		[
-#comment
-			1, #hello
-#comment
-			2
-#comment
-#comment
-
-, #monkey
-		] ,
-		[
-			[3],
-			[4]
-		],
-		[5,6]
-	],
-	[234, 2345],
-	[3.1416, 23.45,67.2, 34567.2345],
-	[
-		1979-05-27T07:32:00Z,
-		1980-05-27T07:32:00Z,
-		1968-02-29T07:32:00Z
-	]
-] #hahaha
-
-#hahaha again!";
-			#endregion
-
 			string t = @"
 # This is a TOML document. Boom.
 
@@ -92,13 +53,10 @@ hosts = [
 			dynamic td;
 			if(TomlParser.TryParse(t, out td));
 			{
-				var q = td["clients"];
+				var q = td.clients.data;
+				var h1 = td.GetTreeHash();
+				var h2 = td.GetFlatHash();
 			}
-
-			
-
-			//dynamic td = new Test();
-			//var v = td[ 0 ][ 1 ][ 2 ];
 		}
 	}
 

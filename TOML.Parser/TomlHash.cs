@@ -39,5 +39,27 @@ namespace TOML
 			}
 			return temp;
 		}
+
+		public List<string> SubNames(List<string> ls)
+		{
+			if (ls == null)
+			{
+				return null;
+			}
+			if (ls.Count >= NameParts.Count)
+			{
+				return null;
+			}
+
+			for (int i = 0; i < ls.Count; i++ )
+			{
+				if (ls[i] != NameParts[i])
+				{
+					return null;
+				}
+			}
+
+			return NameParts.GetRange(0, ls.Count+1);
+		}
 	}
 }
