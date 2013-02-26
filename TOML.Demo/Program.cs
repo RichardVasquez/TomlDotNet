@@ -92,7 +92,7 @@ hosts = [
 			dynamic td;
 			if(TomlParser.TryParse(t, out td));
 			{
-				var q = td.clients.data["hazel",0];
+				var q = td["clients"];
 			}
 
 			
