@@ -1,14 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Dynamic;
-using System.Linq;
-using System.Text;
 using Sprache;
 
 namespace TOML
 {
-	public static class Parser
+	public static class TomlParser
 	{
 		private static readonly Parser<char> SpecialNull =
 			from c1 in Parse.Char('\\')
@@ -53,7 +50,7 @@ namespace TOML
 			from c2 in Parse.Char('\n')
 			select Environment.NewLine;
 
-		public static readonly Parser<TokenComment> Comment =
+		private static readonly Parser<TokenComment> Comment =
 			from spc1 in Parse.WhiteSpace.Many()
 			from hash in Parse.Char('#')
 			from comment in Parse.AnyChar.Except(Eol).Many()
@@ -80,14 +77,14 @@ namespace TOML
 			from hc1 in HandleComments
 			select '\0';
 
-		public static readonly Parser<TokenInteger> Integer =
+		private static readonly Parser<TokenInteger> Integer =
 			from spc1 in Parse.WhiteSpace.Many()
 			from minus in Parse.String("-").Optional()
 			from number in Parse.Number.Token()
 			from hc in HandleComments
 			select new TokenInteger(minus, number);
 
-		public static readonly Parser<TokenFloat> Float =
+		private static readonly Parser<TokenFloat> Float =
 			from spc1 in Parse.WhiteSpace.Many()
 			from minus in Parse.String("-").Optional()
 			from number1 in Parse.Number.Token()
@@ -96,7 +93,7 @@ namespace TOML
 			from hc in HandleComments
 			select new TokenFloat(minus, number1, number2);
 
-		public static readonly Parser<TokenDateTime> Datetime =
+		private static readonly Parser<TokenDateTime> Datetime =
 			from spc1 in Parse.WhiteSpace.Many()
 			from year in Parse.Number.Token()
 			from dash1 in Parse.Char('-')
@@ -113,7 +110,7 @@ namespace TOML
 			from hc in HandleComments
 			select new TokenDateTime(new[] { year, month, day, hour, minute, second });
 
-		public static readonly Parser<TokenString> String =
+		private static readonly Parser<TokenString> String =
 			from spc1 in Parse.WhiteSpace.Many()
 			from q1 in Parse.Char('"')
 			from c in
@@ -125,7 +122,7 @@ namespace TOML
 			from hc in HandleComments
 			select new TokenString(c);
 
-		public static readonly Parser<TokenBool> Boolean =
+		private static readonly Parser<TokenBool> Boolean =
 			from spc1 in Parse.WhiteSpace.Many()
 			from b in
 				( from b1 in Parse.String("true").Token()
@@ -193,43 +190,37 @@ namespace TOML
 			from hc in HandleComments
 			select new TokenArray(first, rest);
 
-		public static readonly Parser<TokenArray> ArrayInteger =
+		private static readonly Parser<TokenArray> ArrayInteger =
 			from l in ArrayChompLeft
 			from list in ListInteger
 			from r in ArrayChompRight
 			select list;
 
-		public static readonly Parser<TokenArray> ArrayFloat =
+		private static readonly Parser<TokenArray> ArrayFloat =
 			from l in ArrayChompLeft
 			from list in ListFloat
 			from r in ArrayChompRight
 			select list;
 
-		public static readonly Parser<TokenArray> ArrayString =
+		private static readonly Parser<TokenArray> ArrayString =
 			from l in ArrayChompLeft
 			from list in ListString
 			from r in ArrayChompRight
 			select list;
 
-		public static readonly Parser<TokenArray> ArrayArray =
-			from l in ArrayChompLeft
-			from list in ListArray
-			from r in ArrayChompRight
-			select list;
-
-		public static readonly Parser<TokenArray> ArrayBoolean =
+		private static readonly Parser<TokenArray> ArrayBoolean =
 			from l in ArrayChompLeft
 			from list in ListBoolean
 			from r in ArrayChompRight
 			select list;
 
-		public static readonly Parser<TokenArray> ArrayDateTime =
+		private static readonly Parser<TokenArray> ArrayDateTime =
 			from l in ArrayChompLeft
 			from list in ListDateTime
 			from r in ArrayChompRight
 			select list;
 
-		public static readonly Parser<TokenArray> Array =
+		private static readonly Parser<TokenArray> Array =
 			from spc1 in Parse.WhiteSpace.Many()
 			from c0 in Comment.Many()
 			from array in
@@ -252,6 +243,12 @@ namespace TOML
 			from hc in HandleComments
 			select new TokenArray(first, rest);
 
+		private static readonly Parser<TokenArray> ArrayArray =
+			from l in ArrayChompLeft
+			from list in ListArray
+			from r in ArrayChompRight
+			select list;
+
 		//	Seriously?  All non whitespace?  Feh.  Ok.  Here we go.
 		//
 		//	I'm also going to block control characters before space.
@@ -263,7 +260,7 @@ namespace TOML
 		//		Keys start with the first non-whitespace character
 		//		and end with the last non-whitespace character before
 		//		the equals sign.
-		public static readonly Parser<string> KeyName =
+		private static readonly Parser<string> KeyName =
 			from c in
 				Parse
 				.Char(
@@ -276,7 +273,7 @@ namespace TOML
 				.AtLeastOnce().Text()
 			select c;
 
-		public static readonly Parser<ITomlToken> KeyValue =
+		private static readonly Parser<ITomlToken> KeyValue =
 			from s0 in Parse.WhiteSpace.Many()
 			from v in Datetime
 				.Or<ITomlToken>(Float)
@@ -288,7 +285,7 @@ namespace TOML
 			select v;
 
 
-		public static readonly Parser<TomlKeyValue> Assignment =
+		private static readonly Parser<TomlKeyValue> Assignment =
 			from s0 in Parse.WhiteSpace.Many()
 			from key in KeyName
 			from s1 in Parse.WhiteSpace.Many()
@@ -298,16 +295,16 @@ namespace TOML
 			from s3 in Parse.WhiteSpace.Many()
 			select new TomlKeyValue(key, val);
 
-		public static readonly Parser<string> IgnoreText =
+		private static readonly Parser<string> IgnoreText =
 			from text in
 				(
 					from hc0 in HandleComments.Many()
 					from s0 in Parse.WhiteSpace.Many()
 					select string.Empty
 				).Many()
-			select "";
+			select string.Empty;
 
-		public static readonly Parser<TomlAssignments> HashAssignments =
+		private static readonly Parser<TomlAssignments> HashAssignments =
 			from block in
 				(
 					from t0 in IgnoreText
@@ -317,7 +314,7 @@ namespace TOML
 				).Many()
 			select new TomlAssignments(block);
 
-		public static readonly Parser<TomlKeyGroupName> GroupName =
+		private static readonly Parser<TomlKeyGroupName> GroupName =
 			from s0 in Parse.WhiteSpace.Many()
 			from lb in Parse.Char('[')
 			from s1 in Parse.WhiteSpace.Many()
@@ -331,86 +328,28 @@ namespace TOML
 			from s3 in Parse.WhiteSpace.Many()
 			select new TomlKeyGroupName(first, rest);
 
-		public static readonly Parser<ITomlData> NamedBlock =
+		private static readonly Parser<TomlBlock> NamedBlock =
 			from t0 in IgnoreText
 			from g in GroupName
 			from t1 in IgnoreText
 			from h in HashAssignments
 			select new TomlBlock(g, h);
 
+		public static readonly Parser<TomlDocument> Document =
+			from h0 in HashAssignments
+			from nb in NamedBlock.Many()
+			select new TomlDocument(h0, nb);
 
-
-
-	}
-
-	public class TomlBlock:ITomlData
-	{
-		public TomlBlock(TomlKeyGroupName tomlKeyGroupName, TomlAssignments tomlAssignments)
+		public static bool TryParse(string s, out object td)
 		{
-			throw new NotImplementedException();
-		}
-	}
-
-	public class TomlKeyGroupName
-	{
-		public string Name { get; private set; }
-		public List<string> Hashes
-		{
-			get {
-				return new List<string>(_hashes);
-			}
-		}
-		private readonly List< string> _hashes = new List<string>();
-
-		public TomlKeyGroupName(string first, IEnumerable<string> rest)
-		{
-			List<string> temp = new List<string>{first};
-			temp.AddRange(rest.Where(s => !string.IsNullOrEmpty(s)));
-			Name = string.Join(".", temp);
-			_hashes = temp;
-		}
-	}
-
-	public interface ITomlData
-	{
-	}
-
-	public class TomlAssignments
-	{
-		public List<TomlKeyValue> Assignments = new List<TomlKeyValue>();
-		public TomlAssignments(IEnumerable<TomlKeyValue> block)
-		{
-			foreach (TomlKeyValue tomlKeyValue in block)
+			var tp = Document.TryParse(s);
+			if (tp.WasSuccessful)
 			{
-				Assignments.Add(tomlKeyValue);
+				td = tp.Value;
+				return true;
 			}
+			td = null;
+			return false;
 		}
 	}
-
-	[DebuggerDisplay("{Debug()}")]
-	public class TomlKeyValue
-	{
-		public string Key { get; private set; }
-		public ITomlToken Value { get; private set; }
-
-		public TomlKeyValue(string key, ITomlToken val)
-		{
-			Key = key;
-			Value = val;
-		}
-
-		private string Debug()
-		{
-			StringBuilder sb = new StringBuilder();
-			sb.Append(Key).Append(" = ").Append(Value);
-			return sb.ToString();
-		}
-	}
-
-	public class DynamicToml : DynamicObject
-	{
-
-	}
-
-
 }

@@ -7,7 +7,7 @@ namespace TOML
 	[DebuggerDisplay("{Value}")]
 	public class TokenComment:ITomlToken
 	{
-		public new string Value { get; private set; }
+		public string Value { get; private set; }
 
 		public TokenComment(char hash, IEnumerable<char> comment)
 		{
