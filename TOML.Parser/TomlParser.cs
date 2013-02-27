@@ -1,7 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Dynamic;
 using Sprache;
+using TOML.DocumentElements;
+using TOML.ParserTokens;
 
 namespace TOML
 {
@@ -70,7 +70,7 @@ namespace TOML
 			from hc1 in HandleComments
 			select '\0';
 
-		//	Chomp the right opening of an array, ignoring extraneous text
+		//	Chomp the right closing of an array, ignoring extraneous text
 		private static readonly Parser<char> ArrayChompRight =
 			from hc0 in HandleComments
 			from rb in Parse.Char(']')

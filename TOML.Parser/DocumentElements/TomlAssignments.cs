@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace TOML
+namespace TOML.DocumentElements
 {
 	public class TomlAssignments
 	{

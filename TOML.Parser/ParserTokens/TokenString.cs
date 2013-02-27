@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 
-namespace TOML
+namespace TOML.ParserTokens
 {
 	[DebuggerDisplay("{Value}")]
 	public class TokenString:ITomlToken

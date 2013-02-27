@@ -44,22 +44,22 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ITomlData.cs" />
-    <Compile Include="TokenNull.cs" />
-    <Compile Include="TomlHash.cs" />
+    <Compile Include="ParserTokens\TokenNull.cs" />
+    <Compile Include="DocumentElements\TomlHash.cs" />
     <Compile Include="TomlParser.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="TokenArray.cs" />
-    <Compile Include="TokenBool.cs" />
-    <Compile Include="TokenComment.cs" />
-    <Compile Include="TokenDateTime.cs" />
-    <Compile Include="TokenFloat.cs" />
-    <Compile Include="TokenInteger.cs" />
-    <Compile Include="TokenString.cs" />
-    <Compile Include="TomlAssignments.cs" />
-    <Compile Include="TomlBlock.cs" />
+    <Compile Include="ParserTokens\TokenArray.cs" />
+    <Compile Include="ParserTokens\TokenBool.cs" />
+    <Compile Include="ParserTokens\TokenComment.cs" />
+    <Compile Include="ParserTokens\TokenDateTime.cs" />
+    <Compile Include="ParserTokens\TokenFloat.cs" />
+    <Compile Include="ParserTokens\TokenInteger.cs" />
+    <Compile Include="ParserTokens\TokenString.cs" />
+    <Compile Include="DocumentElements\TomlAssignments.cs" />
+    <Compile Include="DocumentElements\TomlBlock.cs" />
     <Compile Include="TomlDocument.cs" />
-    <Compile Include="TomlKeyGroupName.cs" />
-    <Compile Include="TomlKeyValue.cs" />
+    <Compile Include="DocumentElements\TomlKeyGroupName.cs" />
+    <Compile Include="DocumentElements\TomlKeyValue.cs" />
     <Compile Include="ITomlToken.cs" />
   </ItemGroup>
   <ItemGroup>

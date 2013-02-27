@@ -5,16 +5,24 @@ using System.Dynamic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using TOML.DocumentElements;
+using TOML.ParserTokens;
 
 namespace TOML
 {
 	public class TomlDocument:DynamicObject
 	{
-		private const int Spacing = 5;
 		private readonly TomlAssignments _rootBlock;
 		private readonly List<TomlBlock> _namedBlocks;
 		private readonly List<TomlHash> _variables = new List<TomlHash>();
 		private readonly List<ITomlToken> _arrays = new List<ITomlToken>();
+
+		// ReSharper disable UnusedMember.Local
+		private TomlDocument()
+		{
+			throw new NotImplementedException("Only construct from TomlParser.TryParse()");
+		}
+		// ReSharper restore UnusedMember.Local
 
 		#region Base constructor
 		/// <summary>
@@ -70,14 +78,12 @@ namespace TOML
 		/// </summary>
 		private void MungeRootBlock()
 		{
-			foreach (var tomlKeyValue in _rootBlock.Assignments)
+			foreach (TomlHash th in _rootBlock.Assignments.Select(tomlKeyValue => new TomlHash
 			{
-				TomlHash th = new TomlHash
-				{
-					Data = tomlKeyValue.Value,
-					NameParts = new List<string> {tomlKeyValue.Key}
-				};
-
+				Data = tomlKeyValue.Value,
+				NameParts = new List<string> {tomlKeyValue.Key}
+			}))
+			{
 				if (_variables.FirstOrDefault(v => v.Name == th.Name) != null)
 				{
 					throw new InvalidDataException(th.Name + " is a duplicate.");
@@ -113,9 +119,6 @@ namespace TOML
 		/// The type of data you're trying to retrieve (either a keygroup or an actual key)
 		/// will determine if you receive a "child" TomlDocument or an actual value.
 		/// </summary>
-		/// <param name="binder"></param>
-		/// <param name="result"></param>
-		/// <returns></returns>
 		public override bool TryGetMember(GetMemberBinder binder, out object result)
 		{
 			List<TomlHash> lth = _variables.Where(hash => hash.NameParts.First() == binder.Name).ToList();
@@ -151,6 +154,28 @@ namespace TOML
 					result = new TomlDocument(fin);
 					return true;
 			}
+		}
+
+		/// <summary>
+		/// TomlDocument is read-only.
+		/// </summary>
+		/// <remarks>
+		/// In short, no.  In long, NOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO.
+		/// </remarks>
+		public override bool TrySetMember(SetMemberBinder binder, object value)
+		{
+			return false;
+		}
+
+		/// <summary>
+		/// TomlDocument is read-only.
+		/// </summary>
+		/// <remarks>
+		/// In short, no.  In long, NOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO.
+		/// </remarks>
+		public override bool TrySetIndex(SetIndexBinder binder, object[] indexes, object value)
+		{
+			return false;
 		}
 
 		/// <summary>
@@ -279,8 +304,6 @@ namespace TOML
 		/// numeric indices for arrays.  Using the original TOML document provided,
 		/// You would acess the value "alpha" via ["clients"]["hosts"][0].
 		/// </summary>
-		/// <param name="root"></param>
-		/// <returns></returns>
 		public Hashtable GetTreeHash(string root = "")
 		{
 			Hashtable ht = new Hashtable();
@@ -436,6 +459,9 @@ namespace TOML
 			return tempNulls.ToList();
 		}
 
+		/// <summary>
+		/// Simple debug code that shows the stored contents.
+		/// </summary>
 		public override IEnumerable<string> GetDynamicMemberNames()
 		{
 			List<string> members
@@ -446,6 +472,11 @@ namespace TOML
 			return members;
 		}
 
+		/// <summary>
+		/// You really shouldn't have this type of situation,
+		/// but if you're grabbing sections of the tree structure,
+		/// here's the remaining arrays.
+		/// </summary>
 		private List<string> GetArrayMembers()
 		{
 			return _arrays.OfType<TokenArray>()
@@ -465,6 +496,9 @@ namespace TOML
 						).ToList();
 		}
 
+		/// <summary>
+		/// Provides a list of hash names available via the varying indexing/naming retrieval values.
+		/// </summary>
 		private List<string> GetVariableMembers()
 		{
 			List<string> members = new List<string>();
@@ -484,9 +518,15 @@ namespace TOML
 			return members;
 		}
 
-		#region Testing...
-
-		public string Stuff()
+		/// <summary>
+		/// Presents the text needed to recreate the TOML file, minus the initial comments.
+		/// </summary>
+		/// <remarks>
+		/// It also does a strong cleanup of the data, alphabetizing the keygroups and all
+		/// the keys within each group.  It also puts the arrays at the end of each group,
+		/// with some pretty printing for wide values.
+		/// </remarks>
+		public override string ToString()
 		{
 			if (_variables == null || _variables.Count == 0)
 			{
@@ -505,6 +545,7 @@ namespace TOML
 					continue;
 				}
 
+				//	output sorts the keys and puts arrays at the end.  It's an aesthetic thing, is all.
 				if (v.KeyGroup != "")
 				{
 					sb.AppendFormat("[{0}]", v.KeyGroup).AppendLine();
@@ -520,227 +561,18 @@ namespace TOML
 				sb.AppendLine();
 			}
 
-			return "";
+			return sb.ToString();
 		}
 
+		/// <summary>
+		/// In case you parsed nothing or created a brand new TomlDocument from scratch.
+		/// </summary>
+		/// <remarks>
+		/// Since TomlDocument is effectively read-only, you shouldn't be creating one from scratch.
+		/// </remarks>
 		private static string ShowEmpty()
 		{
 			return "# Empty TOML";
-		}
-		#endregion
-
-
-		public override string ToString()
-		{
-			Hashtable ht = GetTreeHash();
-
-			return TextTree(ht);
-		}
-
-		private string TextTree(Hashtable ht, string name = "", int depth = 0)
-		{
-			StringBuilder sb = new StringBuilder();
-			if (ht == null)
-			{
-				return "";
-			}
-
-	
-			if (depth > 0 && name != "")
-			{
-				sb.AppendLine();
-				sb.Append(Spacer(depth));
-				sb.Append("[").Append(name).AppendLine("]");
-			}
-
-			foreach (DictionaryEntry entry in ht)
-			{
-				if (entry.Key is string)
-				{
-					if (!( entry.Value is Hashtable ))
-					{
-						sb.Append(MakeToStringLine(entry, depth));
-					}
-					else
-					{
-						bool allInts = IsArray(entry);
-						//	we have an array
-						if (allInts)
-						{
-							sb.Append(entry.Key).Append(" = ");
-							sb.Append(NewArray(entry.Value as Hashtable, depth));
-							sb.AppendLine();
-						}
-						else
-						{
-							//	we have additional keys
-							string groupName = name;
-							if (groupName != "")
-							{
-								groupName += ".";
-							}
-							sb.Append(TextTree(entry.Value as Hashtable, groupName + entry.Key, depth + 1));
-						}
-
-					}
-				}
-			}
-			return sb.ToString();
-		}
-
-		private string NewArray(Hashtable entry, int depth)
-		{
-			StringBuilder sb = new StringBuilder();
-			sb.Append("[ ");
-			if (entry.Count == 0)
-			{
-				sb.Append(" ] # Empty array?").AppendLine();
-				return sb.ToString();
-			}
-
-			List<string> output = new List<string>();
-			List<object> newKeys = entry.Keys.Cast<object>().ToList();
-			List<int> intKeys = newKeys.OfType<int>().ToList();
-			intKeys.Sort();
-
-			foreach (
-				int intKey in
-					from intKey in intKeys
-			        let key = intKey
-			        let key1 = intKey
-			        from newKey in newKeys
-						.OfType<int>()
-						.Where(newKey => newKey == key)
-			            .Where(newKey => entry.ContainsKey(key1))
-					select intKey)
-			{
-				if (!( entry[ intKey ] is Hashtable ))
-				{
-					output.Add(CreateString(( entry[ intKey ] )));
-				}
-				else
-				{
-					StringBuilder sb2 = new StringBuilder();
-					sb2.Append("" )
-					   .Append(
-					           NewArray(entry[ intKey ] as Hashtable, depth + 1));
-					output.Add(sb2.ToString());
-				}
-			}
-
-			if (output.Count > 0)
-			{
-				sb.Append(string.Join(", ", output));
-			}
-
-			sb.Append(" ]");
-			return sb.ToString();
-		}
-
-		private static bool IsArray(DictionaryEntry de)
-		{
-			var ht = de.Value as Hashtable;
-			return ht != null && ht.Keys.Cast<object>().All(key => key is int);
-		}
-
-
-		private static string Spacer(int depth)
-		{
-			return depth > 1
-					  ? new string(' ', (depth - 1) * Spacing)
-					  : "";
-		}
-
-		private string MakeToStringLine(DictionaryEntry entry, int depth)
-		{
-			StringBuilder sb = new StringBuilder(Spacer(depth));
-
-			object n = entry.Key as string;
-			sb.AppendFormat("{0} = ", n);
-			object o = entry.Value;
-
-			sb.AppendLine(CreateString(o));
-			return sb.ToString();
-		}
-
-		private string CreateString(object o)
-		{
-			if ((o is Int64) || o is double)
-			{
-				return ToStringNumber(o);
-			}
-
-			if (o is bool)
-			{
-				return ToStringBool(o);
-			}
-
-			if (o is DateTime)
-			{
-				return ToStringDateTime(o);
-			}
-
-			if (o is string)
-			{
-				return @"""" + ToStringString(o) +@"""";
-			}
-
-			return ToStringError(o);
-		}
-
-		private static string ToStringNumber(object o)
-		{
-			return o.ToString();
-		}
-
-		private static string ToStringBool(object o)
-		{
-			bool b = (bool) o;
-			return b
-				       ? "true"
-				       : "false";
-		}
-
-		private static string ToStringDateTime(object o)
-		{
-			DateTime d = (DateTime) o;
-			return d.ToString("yyyy-MM-ddTHH:mm:ssZ");
-		}
-
-		private static string ToStringString(object o)
-		{
-			string s = o as string;
-			if (s == null)
-			{
-				return "";
-			}
-			s = s.Replace("\\", "\\\\");
-			s = s.Replace("\0", "\\0");
-			s = s.Replace("\t", "\\t");
-			s = s.Replace("\n", "\\n");
-			s = s.Replace("\r", "\\r");
-			s = s.Replace("\"", "\\");
-			return s;
-		}
-
-		private static string ToStringError(object o)
-		{
-			try
-			{
-				var entry = (DictionaryEntry) o;
-				StringBuilder sb = new StringBuilder();
-				sb.AppendLine("null # Error!");
-				sb.AppendLine().AppendLine();
-				sb.AppendFormat("# Key:   {0}", entry.Key).AppendLine();
-				sb.AppendFormat("# Value: {0} ({1})", entry.Value, entry.Value.GetType().FullName).AppendLine();
-				sb.AppendLine();
-				return sb.ToString();
-			}
-			catch
-			{
-				return "# Unable to parse o.";
-			}
-
 		}
 	}
 }

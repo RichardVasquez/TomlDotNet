@@ -4,14 +4,14 @@ using System.Diagnostics;
 using System.Text;
 using Sprache;
 
-namespace TOML
+namespace TOML.ParserTokens
 {
 	[DebuggerDisplay("{Value}")]
-	public class TokenFloat:ITomlToken
+	public class TokenInteger : ITomlToken
 	{
-		public double Value { get; private set; }
+		public Int64 Value { get; private set; }
 
-		public TokenFloat(IOption<IEnumerable<char>> minus, string number1, string number2)
+		internal TokenInteger(IOption<IEnumerable<char>> minus, string number)
 		{
 			StringBuilder sb = new StringBuilder();
 			if (minus.IsDefined && !minus.IsEmpty)
@@ -22,14 +22,14 @@ namespace TOML
 				}
 			}
 
-			sb.Append(number1).Append('.').Append(number2);
+			sb.Append(number);
 
-			double f;
-			if (!Double.TryParse(sb.ToString(), out f))
+			Int64 v;
+			if (!Int64.TryParse(sb.ToString(), out v))
 			{
-				throw new ArgumentException(string.Format("Bad float format: {0}", sb));
+				throw new ArgumentException(string.Format("Bad Int64 format: {0}", sb));
 			}
-			Value = f;
+			Value = v;
 		}
 
 		public override string ToString()

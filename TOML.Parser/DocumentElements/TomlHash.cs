@@ -2,7 +2,7 @@
 using System.Diagnostics;
 using System.Linq;
 
-namespace TOML
+namespace TOML.DocumentElements
 {
 	[DebuggerDisplay("{Name}: {Data}")]
 	public class TomlHash

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 
-namespace TOML
+namespace TOML.ParserTokens
 {
 	[DebuggerDisplay("{Value}")]
 	public class TokenDateTime:ITomlToken

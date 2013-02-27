@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Text;
 
-namespace TOML
+namespace TOML.DocumentElements
 {
 	[DebuggerDisplay("{Debug()}")]
 	public class TomlKeyValue

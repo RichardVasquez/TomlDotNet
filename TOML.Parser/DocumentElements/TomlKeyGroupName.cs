@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 
-namespace TOML
+namespace TOML.DocumentElements
 {
 	public class TomlKeyGroupName
 	{

@@ -1,4 +1,4 @@
-﻿namespace TOML
+﻿namespace TOML.DocumentElements
 {
 	public class TomlBlock:ITomlData
 	{

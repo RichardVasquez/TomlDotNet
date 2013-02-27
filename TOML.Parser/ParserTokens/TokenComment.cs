@@ -2,7 +2,7 @@
 using System.Diagnostics;
 using System.Text;
 
-namespace TOML
+namespace TOML.ParserTokens
 {
 	[DebuggerDisplay("{Value}")]
 	public class TokenComment:ITomlToken
@@ -21,7 +21,7 @@ namespace TOML
 
 		public override string ToString()
 		{
-			return "#" + Value;
+			return "# " + Value;
 		}
 
 		public string GetOutput()

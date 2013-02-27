@@ -7,7 +7,7 @@ namespace TOML.Demo
 	{
 		static void Main(string[] args)
 		{
-			const string file = "harder.toml";
+			const string file = "Example.toml";
 			string toml;
 
 			using (StreamReader sr = new StreamReader(file))

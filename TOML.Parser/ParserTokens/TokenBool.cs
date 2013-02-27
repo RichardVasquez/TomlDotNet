@@ -1,6 +1,6 @@
 ﻿using System.Diagnostics;
 
-namespace TOML
+namespace TOML.ParserTokens
 {
 	[DebuggerDisplay("{Value}")]
 	public class TokenBool:ITomlToken
