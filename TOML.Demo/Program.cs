@@ -24,11 +24,15 @@ namespace TOML.Demo
 			var checkParse = TomlParser.TryParse(toml, out td);
 
 	
-			var q = td.clients.data;
-			var s = td.GetDynamicMemberNames();
-			var t = q.GetDynamicMemberNames();
-			var h1 = td.GetTreeHash();
-			var h2 = td.GetFlatHash();
+			var cd = td.clients.data;
+			var tdmn = td.GetDynamicMemberNames();
+			var cdmn = cd.GetDynamicMemberNames();
+			var tdth = td.GetTreeHash();
+			var tdfh = td.GetFlatHash();
+			var cdth = cd.GetTreeHash();
+			var cdfh = cd.GetFlatHash();
+
+			string s = td.ToString();
 		}
 	}
 

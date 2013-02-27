@@ -4,11 +4,13 @@ using System.Collections.Generic;
 using System.Dynamic;
 using System.IO;
 using System.Linq;
+using System.Text;
 
 namespace TOML
 {
 	public class TomlDocument:DynamicObject
 	{
+		private const int Spacing = 5;
 		private readonly TomlAssignments _rootBlock;
 		private readonly List<TomlBlock> _namedBlocks;
 		private readonly List<TomlHash> _variables = new List<TomlHash>();
@@ -487,6 +489,321 @@ namespace TOML
 				members.Add(s);
 			}
 			return members;
+		}
+
+		public override string ToString()
+		{
+			Hashtable ht = GetTreeHash();
+
+			return TextTree(ht);
+		}
+
+		private string TextTree(Hashtable ht, string name = "", int depth = 0)
+		{
+			StringBuilder sb = new StringBuilder();
+			if (ht == null)
+			{
+				return "";
+			}
+
+	
+			if (depth > 0 && name != "")
+			{
+				sb.AppendLine();
+				sb.Append(Spacer(depth));
+				sb.Append("[").Append(name).AppendLine("]");
+			}
+
+			foreach (DictionaryEntry entry in ht)
+			{
+				if (entry.Key is string)
+				{
+					if (!( entry.Value is Hashtable ))
+					{
+						sb.Append(MakeToStringLine(entry, depth));
+					}
+					else
+					{
+						bool allInts = IsArray(entry);
+						//	we have an array
+						if (allInts)
+						{
+							sb.Append(entry.Key).Append(" = ");
+							sb.Append(NewArray(entry.Value as Hashtable, depth));
+							sb.AppendLine();
+						}
+						else
+						{
+							//	we have additional keys
+							string groupName = name;
+							if (groupName != "")
+							{
+								groupName += ".";
+							}
+							sb.Append(TextTree(entry.Value as Hashtable, groupName + entry.Key, depth + 1));
+						}
+
+					}
+				}
+			}
+			return sb.ToString();
+		}
+
+		private string NewArray(Hashtable entry, int depth)
+		{
+			StringBuilder sb = new StringBuilder();
+			sb.Append("[ ");
+			if (entry.Count == 0)
+			{
+				sb.Append(" ] # Empty array?").AppendLine();
+				return sb.ToString();
+			}
+
+			List<string> output = new List<string>();
+			List<object> newKeys = entry.Keys.Cast<object>().ToList();
+			List<int> intKeys = newKeys.OfType<int>().ToList();
+			intKeys.Sort();
+
+			foreach (int intKey in intKeys)
+			{
+				foreach (object newKey in newKeys)
+				{
+					if (!( newKey is int ))
+					{
+						continue;
+					}
+					if ((int) newKey != intKey)
+					{
+						continue;
+					}
+					if (!entry.ContainsKey(intKey))
+					{
+						continue;
+					}
+
+					if (!( entry[ intKey ] is Hashtable ))
+					{
+						output.Add(CreateString(( entry[ intKey ] )));
+					}
+					else
+					{
+						StringBuilder sb2 = new StringBuilder();
+						sb2.AppendLine().Append(Spacer(depth + 1))
+						   .Append(
+						           NewArray(entry[ intKey ] as Hashtable, depth + 1));
+						output.Add(sb2.ToString());
+					}
+				}
+			}
+
+
+			//foreach (DictionaryEntry de in entry)
+			//{
+			//    if (de.Value is Hashtable)
+			//    {
+			//        StringBuilder sb2 = new StringBuilder();
+			//        sb2.AppendLine().Append(Spacer(depth+1))
+			//          .Append(NewArray(de.Value as Hashtable, depth + 1));
+			//        output.Add(sb2.ToString());
+			//    }
+			//    else
+			//    {
+			//        output.Add(CreateString(de.Value));
+			//    }
+			//}
+
+			if (output.Count > 0)
+			{
+				sb.Append(string.Join(", ", output));
+			}
+
+			sb.Append(" ]");
+			return sb.ToString();
+		}
+
+		private static bool IsArray(DictionaryEntry de)
+		{
+			var ht = de.Value as Hashtable;
+			return ht != null && ht.Keys.Cast<object>().All(key => key is int);
+		}
+
+
+		private static string Spacer(int depth)
+		{
+			return depth > 1
+					  ? new string(' ', (depth - 1) * Spacing)
+					  : "";
+		}
+
+		private string ToStringArray(DictionaryEntry node, int depth)
+		{
+			//	node.Value has been tested to be an array HashTable since all of its
+			//	keys are integers.
+			//	
+
+			StringBuilder sb = new StringBuilder("[");
+			
+			if (IsArray(node))
+			{
+				var tht = node.Value as Hashtable;
+				if (tht == null)
+				{
+					return "";
+				}
+				var keys = tht.Keys;
+				object[] os = new object[keys.Count];
+				keys.CopyTo(os, 0);
+
+				if (os.Length == 0)
+				{
+					sb.Append(" ] # Empty Array?");
+					return sb.ToString();
+				}
+
+				List<string> output = new List<string>();
+				object check = tht[ os[ 0 ] ];
+				bool isString = check is string;
+
+				foreach (var key in os)
+				{
+					var de = tht[ key ];
+					if(de is Hashtable)
+					{
+						//	Start over
+						foreach (object o in de as Hashtable)
+						{
+							int k = 0;
+						}
+
+					}
+					else
+					{
+						//	run through the array.
+						output.Add(CreateString(de));
+					}
+				}
+
+				if (isString)
+				{
+					if (output.Count > 1)
+					{
+						for (int i = 0; i < output.Count - 1; i++)
+						{
+							sb
+								.Append(Spacer(depth + 1))
+								.Append(output[ i ])
+								.AppendLine(",");
+						}
+					}
+					sb
+						.Append(Spacer(depth + 1))
+						.AppendLine(output.Last());
+				}
+				else
+				{
+					sb.Append(Spacer(depth + 1));
+					if (output.Count > 1)
+					{
+						for (int i = 0; i < output.Count - 1; i++)
+						{
+							sb.Append(output[ i ]).Append(", ");
+						}
+					}
+					sb.AppendLine(output.Last());
+				}
+			}
+			
+
+			sb.Append(Spacer(depth)).AppendLine("]").AppendLine();
+			return sb.ToString();
+		}
+
+		private string MakeToStringLine(DictionaryEntry entry, int depth)
+		{
+			StringBuilder sb = new StringBuilder(Spacer(depth));
+
+			object n = entry.Key as string;
+			sb.AppendFormat("{0} = ", n);
+			object o = entry.Value;
+
+			sb.AppendLine(CreateString(o));
+			return sb.ToString();
+		}
+
+		private string CreateString(object o)
+		{
+			if ((o is Int64) || o is double)
+			{
+				return ToStringNumber(o);
+			}
+
+			if (o is bool)
+			{
+				return ToStringBool(o);
+			}
+
+			if (o is DateTime)
+			{
+				return ToStringDateTime(o);
+			}
+
+			if (o is string)
+			{
+				return @"""" + ToStringString(o) +@"""";
+			}
+
+			return ToStringError(o);
+		}
+
+		private string ToStringNumber(object o)
+		{
+			return o.ToString();
+		}
+
+		private string ToStringBool(object o)
+		{
+			bool b = (bool) o;
+			return b
+				       ? "true"
+				       : "false";
+		}
+
+		private string ToStringDateTime(object o)
+		{
+			DateTime d = (DateTime) o;
+			return d.ToString("yyyy-MM-ddTHH:mm:ssZ");
+		}
+
+		private string ToStringString(object o)
+		{
+			string s = o as string;
+			s = s.Replace("\\", "\\\\");
+			s = s.Replace("\0", "\\0");
+			s = s.Replace("\t", "\\t");
+			s = s.Replace("\n", "\\n");
+			s = s.Replace("\r", "\\r");
+			s = s.Replace("\"", "\\");
+			return s;
+		}
+
+		private string ToStringError(object o)
+		{
+			try
+			{
+				var entry = (DictionaryEntry) o;
+				StringBuilder sb = new StringBuilder();
+				sb.AppendLine("null # Error!");
+				sb.AppendLine().AppendLine();
+				sb.AppendFormat("# Key:   {0}", entry.Key).AppendLine();
+				sb.AppendFormat("# Value: {0} ({1})", entry.Value, entry.Value.GetType().FullName).AppendLine();
+				sb.AppendLine();
+				return sb.ToString();
+			}
+			catch
+			{
+				return "# Unable to parse o.";
+			}
+
 		}
 	}
 }
