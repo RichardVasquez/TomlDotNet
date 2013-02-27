@@ -7,69 +7,58 @@ namespace TOML.Demo
 	{
 		static void Main(string[] args)
 		{
-			const string file = "Example.toml";
+			const string file = "Harder.toml";
 			string toml;
 
 			using (StreamReader sr = new StreamReader(file))
 			{
 				toml = sr.ReadToEnd();
 			}
-
+			
+			Console.WriteLine("Read the input file");
 			dynamic td1, td2;
-			string s1="", s2="";
-
+			string tds1="";
 			var checkParse = TomlParser.TryParse(toml, out td1);
-
 			if (checkParse)
 			{
-				Console.WriteLine("Parser says it passed.");
-				var t = td1.Stuff();
+				Console.WriteLine("Parser says it passed, now getting ToString().");
+				tds1 = td1.ToString();
+			}
+			else
+			{
+				Console.WriteLine("Parser says it failed. Hit enter to end.");
+				Console.ReadLine();
+				Environment.Exit(1);
 			}
 
-			//    var cd = td1.clients.data;
-			//    //	Examine these in the debugger.
+			Console.WriteLine("Now the resulting ToString() is going to be parsed.");
+			checkParse = TomlParser.TryParse(tds1, out td2);
+			if (checkParse)
+			{
+				Console.WriteLine("The new TOML text parsed. Getting a new ToString()");
+				string tds2 = td2.ToString();
+				if (tds1 == tds2)
+				{
+					Console.WriteLine("The two parsed texts produced the same output.");
+				}
+				else
+				{
+					Console.WriteLine("The two parsed texts did not produce the same output.");
+					Console.WriteLine("Hit enter to end.");
+					Console.ReadLine();
+					Environment.Exit(1);
+				}
+			}
+			else
+			{
+				Console.WriteLine("Parser failed on the output.  Hit enter to end.");
+				Console.ReadLine();
+				Environment.Exit(1);
+			}
 
-			//    long i = td1.database.ports[2];
-			//    long j = td1["database"]["ports"][2];
-			//    long k = td1["database", "ports", 2];
-			//    long m = td1["database.ports"][2];
-
-			//    var tdmn1 = td1.GetDynamicMemberNames();
-			//    var cdmn1 = cd.GetDynamicMemberNames();
-			//    var tdth1 = td1.GetTreeHash();
-			//    var tdfh1 = td1.GetFlatHash();
-			//    var cdth1 = cd.GetTreeHash();
-			//    var cdfh1 = cd.GetFlatHash();
-			//    s1 = td1.ToString();
-			//}
-
-			//if (!string.IsNullOrEmpty(s1))
-			//{
-			//    Console.WriteLine("We've turned the data into a string.");
-
-			//    var checkParse2 = TomlParser.TryParse(s1, out td2);
-			//    if (checkParse2)
-			//    {
-			//        Console.WriteLine("Parsing the output of the input into a new TomlDocument seems to have worked.");
-			//        Console.WriteLine();
-			//        Console.WriteLine();
-			//        Console.WriteLine("Let's check...");
-
-			//        s2 = td2.ToString();
-			//    }
-
-			//    if (s1 == s2)
-			//    {
-			//        Console.WriteLine("An original TOML document was parsed.");
-			//        Console.WriteLine("A text string output was created from the resulting parsing.");
-			//        Console.WriteLine("A new parsing was attempted on the resulting output, then output was compared.");
-			//        Console.WriteLine("They match.  We're effectively done now.");
-			//    }
-			//}
-			//else
-			//{
-			//    Console.WriteLine("Unable to create a string...");
-			//}
+			Console.WriteLine("Initial testing passes. Hit enter to end.");
+			Console.ReadLine();
+			Environment.Exit(0);
 		}
 	}
 

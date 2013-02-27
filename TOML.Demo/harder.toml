@@ -6,7 +6,7 @@
 test_string = "You'll hate me after this - #" # " Annoying, isn't it?
 
     [the.hard]
-    test_array = [ "] ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------", " # "] # ] There you go, parse this!
+    test_array = [ "] ", " # "] # ] There you go, parse this!
     test_array2 = [ "Test #11 ]proved that", "Experiment #9 was a success" ]
     # You didn't think it'd as easy as chucking out the last #, did you?
     another_test_string = " Same thing, but with a string #"

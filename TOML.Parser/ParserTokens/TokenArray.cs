@@ -9,9 +9,10 @@ namespace TOML.ParserTokens
 	[DebuggerDisplay("{DebugAttribute}")]
 	public class TokenArray:ITomlToken
 	{
+		//	These need to be made configurable
 		private bool _prettyPrint = true;
 		private const int Spacing = 3;
-		private const int MaxWidth = 50;
+		private const int MaxWidth = 70;
 
 		public List<ITomlToken> Value;
 		public string DebugAttribute
