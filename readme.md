@@ -43,7 +43,7 @@ Other things
 
 There's a ToString() in the resulting TomlDocument that will recreate the original TOML document _(sans comments)_, although there's no guarantee of the order of the text keys.  Arrays keep their order from the original document.
 
-I implemented GetDunamicMemberNames(), but it's for debugging only, obviously.
+I implemented GetDynamicMemberNames(), but it's for debugging only, obviously.
 
 Final
 -----
