@@ -438,38 +438,31 @@ namespace TOML
 
 		public override IEnumerable<string> GetDynamicMemberNames()
 		{
-			List<string> members;
-			members = _variables.Count > 0
-				          ? GetVariableMembers()
-				          : GetArrayMembers();
+			List<string> members
+				= _variables.Count > 0
+					  ? GetVariableMembers()
+					  : GetArrayMembers();
 
 			return members;
 		}
 
 		private List<string> GetArrayMembers()
 		{
-			List<string> members = new List<string>();
-			foreach (var token in _arrays)
-			{
-				var v = token as TokenArray;
-				if (v == null)
-				{
-					continue;
-				}
-				string fin ="";
-				foreach (var item in v.Value)
-				{
-					string output;
-					var cel = item as TokenArray;
-					string t = ( UnboxTomlObject(item).ToString() );
-					output = cel != null
-						         ? string.Format("[{0}]", cel.Depth)
-						         : string.Format("[{0}]", t);
-					fin += output;
-				}
-				members.Add(fin);
-			}
-			return members;
+			return _arrays.OfType<TokenArray>()
+				.Select(
+					v =>
+						(
+							from item in v.Value
+								let cel = item as TokenArray
+			                    let t = ( UnboxTomlObject(item).ToString() )
+			                    select cel != null
+				                ? string.Format("[{0}]", cel.Depth)
+				                : string.Format("[{0}]", t)
+						)
+						.Aggregate(
+							"",
+							(current, output) => current + output)
+						).ToList();
 		}
 
 		private List<string> GetVariableMembers()
@@ -564,53 +557,30 @@ namespace TOML
 			List<int> intKeys = newKeys.OfType<int>().ToList();
 			intKeys.Sort();
 
-			foreach (int intKey in intKeys)
+			foreach (
+				int intKey in
+					from intKey in intKeys
+			        let key = intKey
+			        let key1 = intKey
+			        from newKey in newKeys
+						.OfType<int>()
+						.Where(newKey => newKey == key)
+			            .Where(newKey => entry.ContainsKey(key1))
+					select intKey)
 			{
-				foreach (object newKey in newKeys)
+				if (!( entry[ intKey ] is Hashtable ))
 				{
-					if (!( newKey is int ))
-					{
-						continue;
-					}
-					if ((int) newKey != intKey)
-					{
-						continue;
-					}
-					if (!entry.ContainsKey(intKey))
-					{
-						continue;
-					}
-
-					if (!( entry[ intKey ] is Hashtable ))
-					{
-						output.Add(CreateString(( entry[ intKey ] )));
-					}
-					else
-					{
-						StringBuilder sb2 = new StringBuilder();
-						sb2.AppendLine().Append(Spacer(depth + 1))
-						   .Append(
-						           NewArray(entry[ intKey ] as Hashtable, depth + 1));
-						output.Add(sb2.ToString());
-					}
+					output.Add(CreateString(( entry[ intKey ] )));
+				}
+				else
+				{
+					StringBuilder sb2 = new StringBuilder();
+					sb2.Append("" )
+					   .Append(
+					           NewArray(entry[ intKey ] as Hashtable, depth + 1));
+					output.Add(sb2.ToString());
 				}
 			}
-
-
-			//foreach (DictionaryEntry de in entry)
-			//{
-			//    if (de.Value is Hashtable)
-			//    {
-			//        StringBuilder sb2 = new StringBuilder();
-			//        sb2.AppendLine().Append(Spacer(depth+1))
-			//          .Append(NewArray(de.Value as Hashtable, depth + 1));
-			//        output.Add(sb2.ToString());
-			//    }
-			//    else
-			//    {
-			//        output.Add(CreateString(de.Value));
-			//    }
-			//}
 
 			if (output.Count > 0)
 			{
@@ -633,89 +603,6 @@ namespace TOML
 			return depth > 1
 					  ? new string(' ', (depth - 1) * Spacing)
 					  : "";
-		}
-
-		private string ToStringArray(DictionaryEntry node, int depth)
-		{
-			//	node.Value has been tested to be an array HashTable since all of its
-			//	keys are integers.
-			//	
-
-			StringBuilder sb = new StringBuilder("[");
-			
-			if (IsArray(node))
-			{
-				var tht = node.Value as Hashtable;
-				if (tht == null)
-				{
-					return "";
-				}
-				var keys = tht.Keys;
-				object[] os = new object[keys.Count];
-				keys.CopyTo(os, 0);
-
-				if (os.Length == 0)
-				{
-					sb.Append(" ] # Empty Array?");
-					return sb.ToString();
-				}
-
-				List<string> output = new List<string>();
-				object check = tht[ os[ 0 ] ];
-				bool isString = check is string;
-
-				foreach (var key in os)
-				{
-					var de = tht[ key ];
-					if(de is Hashtable)
-					{
-						//	Start over
-						foreach (object o in de as Hashtable)
-						{
-							int k = 0;
-						}
-
-					}
-					else
-					{
-						//	run through the array.
-						output.Add(CreateString(de));
-					}
-				}
-
-				if (isString)
-				{
-					if (output.Count > 1)
-					{
-						for (int i = 0; i < output.Count - 1; i++)
-						{
-							sb
-								.Append(Spacer(depth + 1))
-								.Append(output[ i ])
-								.AppendLine(",");
-						}
-					}
-					sb
-						.Append(Spacer(depth + 1))
-						.AppendLine(output.Last());
-				}
-				else
-				{
-					sb.Append(Spacer(depth + 1));
-					if (output.Count > 1)
-					{
-						for (int i = 0; i < output.Count - 1; i++)
-						{
-							sb.Append(output[ i ]).Append(", ");
-						}
-					}
-					sb.AppendLine(output.Last());
-				}
-			}
-			
-
-			sb.Append(Spacer(depth)).AppendLine("]").AppendLine();
-			return sb.ToString();
 		}
 
 		private string MakeToStringLine(DictionaryEntry entry, int depth)
@@ -755,12 +642,12 @@ namespace TOML
 			return ToStringError(o);
 		}
 
-		private string ToStringNumber(object o)
+		private static string ToStringNumber(object o)
 		{
 			return o.ToString();
 		}
 
-		private string ToStringBool(object o)
+		private static string ToStringBool(object o)
 		{
 			bool b = (bool) o;
 			return b
@@ -768,15 +655,19 @@ namespace TOML
 				       : "false";
 		}
 
-		private string ToStringDateTime(object o)
+		private static string ToStringDateTime(object o)
 		{
 			DateTime d = (DateTime) o;
 			return d.ToString("yyyy-MM-ddTHH:mm:ssZ");
 		}
 
-		private string ToStringString(object o)
+		private static string ToStringString(object o)
 		{
 			string s = o as string;
+			if (s == null)
+			{
+				return "";
+			}
 			s = s.Replace("\\", "\\\\");
 			s = s.Replace("\0", "\\0");
 			s = s.Replace("\t", "\\t");
@@ -786,7 +677,7 @@ namespace TOML
 			return s;
 		}
 
-		private string ToStringError(object o)
+		private static string ToStringError(object o)
 		{
 			try
 			{
