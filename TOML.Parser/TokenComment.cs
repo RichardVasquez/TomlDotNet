@@ -23,5 +23,15 @@ namespace TOML
 		{
 			return "#" + Value;
 		}
+
+		public string GetOutput()
+		{
+			if (string.IsNullOrEmpty(Value))
+			{
+				return "#";
+			}
+
+			return "# " + Value.Trim();
+		}
 	}
 }

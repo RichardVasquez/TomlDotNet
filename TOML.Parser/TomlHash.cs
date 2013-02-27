@@ -14,6 +14,29 @@ namespace TOML
 			get { return string.Join(".", NameParts); }
 		}
 
+		public string KeyGroup
+		{
+			get
+			{
+				if (NameParts == null || NameParts.Count < 2)
+				{
+					return "";
+				}
+
+				return string.Join(".", NameParts.Take(NameParts.Count - 1).ToList());
+			}
+		}
+
+		public string Variable
+		{
+			get { return NameParts.Last(); }
+		}
+
+		public string Output
+		{
+			get { return string.Format("{0} = {1}", Variable, Data.GetOutput()); }
+		}
+
 		public bool MatchesName(string s)
 		{
 			var parts = s.Split(new[] {'.'});

@@ -12,7 +12,14 @@ namespace TOML
 		}
 		public override string ToString()
 		{
-			return Value.ToString();
+			return GetOutput();
+		}
+
+		public string GetOutput()
+		{
+			return Value
+				       ? "true"
+				       : "false";
 		}
 	}
 }

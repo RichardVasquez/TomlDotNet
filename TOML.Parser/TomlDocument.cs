@@ -484,6 +484,52 @@ namespace TOML
 			return members;
 		}
 
+		#region Testing...
+
+		public string Stuff()
+		{
+			if (_variables == null || _variables.Count == 0)
+			{
+				return ShowEmpty();
+			}
+
+			List<string> sets = _variables.Select(hash => hash.KeyGroup).Distinct().ToList();
+			sets.Sort();
+
+			StringBuilder sb = new StringBuilder();
+			foreach (List<TomlHash> lth in sets.Select(s1 => _variables.Where(v => v.KeyGroup == s1).ToList()))
+			{
+				var v = lth.FirstOrDefault();
+				if (v == null)
+				{
+					continue;
+				}
+
+				if (v.KeyGroup != "")
+				{
+					sb.AppendFormat("[{0}]", v.KeyGroup).AppendLine();
+				}
+				foreach (TomlHash tomlHash in lth.Where(thType => !(thType.Data is TokenArray)).OrderBy(th => th.Variable))
+				{
+					sb.AppendLine(tomlHash.Output);
+				}
+				foreach (TomlHash tomlHash in lth.Where(thType => thType.Data is TokenArray).OrderBy(th => th.Variable))
+				{
+					sb.AppendLine(tomlHash.Output);
+				}
+				sb.AppendLine();
+			}
+
+			return "";
+		}
+
+		private static string ShowEmpty()
+		{
+			return "# Empty TOML";
+		}
+		#endregion
+
+
 		public override string ToString()
 		{
 			Hashtable ht = GetTreeHash();

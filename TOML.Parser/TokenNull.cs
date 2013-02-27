@@ -9,6 +9,11 @@ namespace TOML
 
 		public override string ToString()
 		{
+			return GetOutput();
+		}
+
+		public string GetOutput()
+		{
 			return "null";
 		}
 	}

@@ -148,5 +148,9 @@ namespace TOML
 			return Value.ToString();
 		}
 
+		public string GetOutput()
+		{
+			return Value.ToString("yyyy-MM-ddTHH:mm:ssZ");
+		}
 	}
 }
